@@ -1,0 +1,55 @@
+version: '3.8'
+
+volumes: 
+  postgresql:
+    driver: 'local'
+  pgadmin:
+
+services:
+  web:
+    build: 
+      context: .
+      dockerfile: docker/web/Dockerfile
+    ports: 
+      - 80:80
+    depends_on: 
+      - app
+
+  app:
+    build: 
+      context: .
+      dockerfile: docker/app/Dockerfile
+    ports: 
+      - 5000:5000
+    volumes: 
+      - ./:/src:cached
+    depends_on:
+      - postgresql
+    command: [sh, -c, npm install && npm run start]
+
+  postgresql:
+    build:
+      context: .
+      dockerfile: docker/postgresql/Dockerfile
+    env_file: ./.env
+    environment: 
+      - TZ=Asia/Tokyo
+      - POSTGRES_USER=${DB_USER_NAME}
+      - POSTGRES_PASSWORD=${DB_USER_PASSWORD}
+    ports: 
+      - 5432:5432
+    volumes:
+      - ./docker/postgresql:/var/lib/postgresql
+      - ./docker/postgresql/sql:/docker-entrypoint-initdb.d
+
+  pgadmin:
+    image: dpage/pgadmin4:latest
+    environment:
+      PGADMIN_DEFAULT_EMAIL: admin@example.com
+      PGADMIN_DEFAULT_PASSWORD: root
+    ports:
+      - 5433:80
+    volumes:
+      - ./docker/pgadmin:/var/lib/pgadmin
+    depends_on:
+      - postgresql
